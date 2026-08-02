@@ -63,6 +63,19 @@ public final class PlaybackController {
             stopInternal();
             return;
         }
+        // The dolly lives in one level. Dimension change, death respawn, or a
+        // void-floor discard replaces or removes it; end cleanly, not zombie.
+        if (dolly.isRemoved() || dolly.level() != mc.level) {
+            String stranded = sequenceName;
+            stopInternal();
+            mc.player.displayClientMessage(Component.literal(
+                    "Playback of '" + stranded + "' stopped: the world changed. Camera returned."), false);
+            return;
+        }
+        // Paused game = frozen take. Resume where we left off on unpause.
+        if (mc.isPaused()) {
+            return;
+        }
         elapsed++;
         double t = Math.min(1.0, elapsed / (double) totalTicks);
         apply(path.sample(eased ? smoothstep(t) : t));

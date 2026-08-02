@@ -46,7 +46,13 @@ public final class CamKeyCommands {
                                 .then(Commands.argument("seconds", DoubleArgumentType.doubleArg(0.1, 3600.0))
                                         .executes(ctx -> play(ctx.getSource(),
                                                 StringArgumentType.getString(ctx, "name"),
-                                                DoubleArgumentType.getDouble(ctx, "seconds"))))))
+                                                DoubleArgumentType.getDouble(ctx, "seconds")))
+                                        // The spec's example is "/camkey play intro 10 seconds";
+                                        // accept the trailing word so the documented form works.
+                                        .then(Commands.literal("seconds")
+                                                .executes(ctx -> play(ctx.getSource(),
+                                                        StringArgumentType.getString(ctx, "name"),
+                                                        DoubleArgumentType.getDouble(ctx, "seconds")))))))
                 .then(Commands.literal("stop")
                         .executes(ctx -> stop(ctx.getSource())))
                 .then(Commands.literal("list")
@@ -107,7 +113,16 @@ public final class CamKeyCommands {
         source.sendSuccess(() -> Component.literal(size == 1
                 ? "Created sequence '" + name + "'. Keyframe 1 captured."
                 : "Keyframe " + size + " added to '" + name + "'."), false);
+        warnIfSaveFailed(source, store);
         return 1;
+    }
+
+    private static void warnIfSaveFailed(CommandSourceStack source, SequenceStore store) {
+        if (store.consumeSaveFailureNotice()) {
+            source.sendFailure(Component.literal(
+                    "Warning: that change is in memory but could not be written to disk "
+                            + "(see the game log). It will retry on your next change."));
+        }
     }
 
     private static int play(CommandSourceStack source, String name, double seconds) {
@@ -194,6 +209,7 @@ public final class CamKeyCommands {
                         + "'; it is now empty and was deleted."
                 : "Removed keyframe " + removedNumber + " from '" + name + "' ("
                         + remaining + " left)."), false);
+        warnIfSaveFailed(source, store);
         return 1;
     }
 }

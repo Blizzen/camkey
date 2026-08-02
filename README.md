@@ -23,7 +23,7 @@ shot for a recording session, without touching the actor or the set.
 | Command | What it does |
 | --- | --- |
 | `/camkey add <name>` | Saves your current position and view angle as the next keyframe of sequence `<name>` (creates it if new) |
-| `/camkey play <name> [seconds]` | Plays the sequence over that many seconds (default 10, configurable) |
+| `/camkey play <name> [seconds]` | Plays the sequence over that many seconds (default 10, configurable); typing the word `seconds` after the number also works |
 | `/camkey stop` | Ends playback immediately and returns the camera |
 | `/camkey list` | Shows every sequence in this world with its keyframe count |
 | `/camkey remove <name> [number]` | Deletes a keyframe (the most recent one if no number given), so a fumbled capture is one command to undo |

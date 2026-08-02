@@ -55,6 +55,7 @@ public final class SequenceStore {
     private final Path path;
     private final Map<String, Sequence> sequences;
     private boolean recoveredFromBadFile;
+    private boolean lastSaveFailed;
 
     private SequenceStore(Path path, Map<String, Sequence> sequences, boolean recoveredFromBadFile) {
         this.path = path;
@@ -128,6 +129,13 @@ public final class SequenceStore {
         return notice;
     }
 
+    /** True when the most recent mutation failed to reach disk. */
+    public boolean consumeSaveFailureNotice() {
+        boolean notice = lastSaveFailed;
+        lastSaveFailed = false;
+        return notice;
+    }
+
     public List<String> names() {
         return List.copyOf(sequences.keySet());
     }
@@ -176,7 +184,9 @@ public final class SequenceStore {
             Path temp = path.resolveSibling(path.getFileName() + ".tmp");
             Files.writeString(temp, pretty, StandardCharsets.UTF_8);
             Files.move(temp, path, StandardCopyOption.REPLACE_EXISTING);
+            lastSaveFailed = false;
         } catch (Exception e) {
+            lastSaveFailed = true;
             LOGGER.error("CamKey: failed to save {}", path, e);
         }
     }

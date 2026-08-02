@@ -41,3 +41,20 @@ README. Newest entries at the bottom.
 - Full-system verdict: verified in-game (capture, eased playback, stop,
   interrupt-and-restart, remove/undo, tab completion, error paths,
   persistence across world reload).
+
+## Session 2: adversarial pass and fix batch
+
+- Ran an adversarial review of the finished repo against the assessment
+  document: cold-cloned it from GitHub and built it like a reviewer would,
+  swept the committed file list, and attacked the code rubric row by row.
+- The pass found two behavioral bugs the happy-path testing missed (the
+  playback clock keeps running while the game is paused; playback goes
+  zombie if the dimension changes mid-flight), one reviewer-facing trap
+  (the brief's own example "/camkey play intro 10 seconds" was a parse
+  error because of the trailing word), and one silent-failure gap (a
+  failed disk write only logged). All four filed as issues with symptom,
+  cause, proposed change, and a test, then fixed in one batch.
+- Worth noting for the AI-fluency question: both behavioral bugs were
+  found by the AI auditing its own earlier output at a different
+  altitude (adversarial review vs. construction), which is the working
+  pattern this project used throughout: build, then attack the build.
