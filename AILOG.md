@@ -17,7 +17,27 @@ README. Newest entries at the bottom.
 - AI scaffolded the repo from the official NeoForge MDK template and wrote a
   throwaway spike (orbit-the-player camera flight) to prove the riskiest
   mechanism first, before any of the real feature was built.
-- Corrections/mistakes to record as they happen:
-  - (pending: fill in the first time the AI asserts an API that does not
-    exist in NeoForge 21.1 / MC 1.21.1 and the compiler or a runtime test
-    catches it)
+- Spike verdict: compiled first try, verified in-game (smooth orbit, clean
+  camera handback, interrupt-and-restart worked).
+
+## Session 1 continued: full system
+
+- AI wrote the phase-2 system (Keyframe/Sequence codecs, SequenceStore,
+  CameraPath, PlaybackController, command tree, client config) against the
+  architecture locked in the planning Q&A. Compiled first try.
+- Corrections/mistakes recorded:
+  - The first draft of SequenceStore made the corrupt-file recovery flag
+    write-once (final field with a plain getter). Every command fetches the
+    store, so the "could not read your file, started fresh" warning would
+    have printed on every command for the rest of the session. Caught while
+    writing the command layer against the store's API, before the phase was
+    ever built or committed; reworked into a consume-once notice
+    (consumeRecoveryNotice()).
+  - Notably, zero NeoForge/Minecraft API hallucinations across the whole
+    project: both phases compiled on the first attempt. The insurance
+    against that class of error (spike the camera rig first, verify
+    in-game before building on it) turned out not to be needed, but it was
+    the right insurance to buy.
+- Full-system verdict: verified in-game (capture, eased playback, stop,
+  interrupt-and-restart, remove/undo, tab completion, error paths,
+  persistence across world reload).
