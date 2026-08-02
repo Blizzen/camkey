@@ -58,29 +58,36 @@ Config (default playback seconds, easing on/off) is in
 
 Four small layers, each in its own package, talking in one direction:
 
-- **`camera`** - the data model. `Keyframe` (position + view angles) and
-  `Sequence` (ordered keyframes, recorded dimension) are immutable records
-  with Mojang Codecs, so (de)serialization is declarative and versionable.
-  `DollyCameraEntity` also lives here: an invisible, physicsless entity that
-  the game camera rides during playback.
-- **`store`** - persistence. One JSON file per world
-  (`<world>/camkey/sequences.json`), written atomically on every mutation
-  (temp file, then rename). The file carries a `schemaVersion` so fields like
-  roll, FOV, or per-keyframe hold times can be added later without breaking
-  old files. An unreadable file is never deleted: it is kept as `.bak`, the
-  library starts fresh, and the user is told once in chat.
-- **`playback`** - the math and the state machine, separately. `CameraPath`
-  is pure geometry: progress in, camera pose out, with distance-weighted
-  timing (constant speed) and shortest-path yaw interpolation (350° to 10°
-  turns 20° through north, not 340° backwards). `PlaybackController` owns
-  time, the dolly entity, and the camera handoff.
-- **`command`** - the Brigadier tree, all validation, and every user-facing
-  message. The store and controller only ever see valid input.
+- **`camera`** - the data model. `Keyframe` (a saved position plus view
+  angle) and `Sequence` (an ordered list of keyframes, plus which dimension
+  it was recorded in) are small immutable data types, saved and loaded
+  through Minecraft's own data-format system (Codecs), the same machinery
+  the game uses for its own files. `DollyCameraEntity` also lives here: an
+  invisible, weightless entity that the game camera rides during playback.
+- **`store`** - saving and loading. One JSON file per world
+  (`<world>/camkey/sequences.json`). Every change is written to disk the
+  moment it happens, and each write goes to a temporary file first and is
+  then swapped into place, so a crash mid-write can never corrupt the file.
+  The file also records which version of the format it is, so future
+  additions (camera tilt, zoom, pausing at a keyframe) will not break old
+  shot files. An unreadable file is never deleted: it is kept as `.bak`, the
+  tool starts fresh, and the user is told once in chat.
+- **`playback`** - the movement itself, in two pieces. `CameraPath` is pure
+  math: given how far along the move we are, it answers where the camera is
+  and where it is looking. Time is shared out by distance so the camera
+  moves at constant speed, and turns always go the short way around (350° to
+  10° turns 20° through north, not 340° backwards). `PlaybackController` is
+  the moment-to-moment manager: it owns the clock, the dolly entity, and
+  handing the camera over and back.
+- **`command`** - the `/camkey` commands (built on Brigadier, Minecraft's
+  own command engine), all input checking, and every user-facing message.
+  The other layers only ever see valid input.
 
 ### Why a camera entity instead of moving the player?
 
 The game camera is pointed at the dolly entity using the same mechanism
-spectator mode uses, all public API, no mixins. The renderer interpolates
+spectator mode uses. That is all supported, public game API: no mixins
+(injecting code into Minecraft's own classes), no engine hacks. The renderer interpolates
 entity positions between ticks natively, so the mod updates the dolly 20
 times a second and gets frame-smooth motion at any FPS for free. The player
 is never moved, so there is no physics, collision, or "actor ended up inside
@@ -111,30 +118,38 @@ integrated server is local, which is how the store reaches the world folder.
 
 ## Known limitations / what I would do differently
 
-- Corners: the path is piecewise linear, so direction changes at keyframes
-  are visible on sharp angles. A Catmull-Rom spline through the keyframes is
-  the natural next step and slots into `CameraPath` without touching
-  anything else.
-- The camera only renders chunks the client has loaded, so a path far from
-  the player can show unloaded terrain.
-- Sequence names are single words (Brigadier word argument).
+- Corners: the camera travels in a straight line between keyframes, so it
+  visibly changes direction at each one. Rounding those corners into one
+  flowing curve is the natural next step, and the path math was built so
+  that change slots in without touching anything else.
+- The game only draws terrain near the player, so a camera path far away
+  from where you are standing can show empty, unloaded world.
+- Sequence names are single words: letters, numbers, dots, dashes, and
+  underscores. No spaces.
 - Multiplayer: works when connected to a server (sequences save under
   `config/camkey/by-server/`), but playback near other players is untested
   and out of scope per the spec.
-- `CameraPath` is deliberately pure math and would be the first thing to get
-  unit tests; wiring a JUnit setup into the mod toolchain did not make the
-  time box.
+- The path math is kept separate from Minecraft on purpose so it could get
+  automated tests; setting up the test harness did not fit the time box, so
+  it is verified by hand for now.
 
 ## If I had another week
 
-- **Path preview**: render the camera path in-world as a line before playing
-  it. The single most useful production feature after playback itself.
-- Catmull-Rom splines, per-keyframe hold times, and roll/FOV keyframing (the
-  file format already has room for them behind `schemaVersion`).
-- A capture keybind with a "current working sequence" so an operator can
-  place keyframes without opening chat.
-- Multiple simultaneous cameras: the dolly/controller split was designed so
-  a second dolly is not a rewrite.
+- **Path preview**: draw the camera's route in the world as a visible line
+  before you commit to playing it. The single most useful production
+  feature after playback itself.
+- **Curved paths**: replace the straight-line legs with one smooth curve
+  through all the keyframes, so corners flow instead of turning sharply.
+- **Holds**: let a keyframe pause the camera in place for a chosen number
+  of seconds before moving on.
+- **Lens controls**: tilting the camera sideways and zooming in or out as
+  part of a move. The save-file format already has room for these without
+  breaking existing shot files.
+- **A capture hotkey**: place keyframes without opening chat, with a way to
+  pick which sequence the key adds to.
+- **Multiple simultaneous cameras**: the camera rig and the playback
+  manager are separate pieces precisely so a second camera is an addition,
+  not a rewrite.
 
 ## AI usage notes
 
@@ -152,9 +167,10 @@ development is in [AILOG.md](AILOG.md).
 - **A catch**: the first draft of the persistence layer's corrupt-file
   recovery marked its "recovered" flag as write-once, which would have
   repeated the "started fresh" warning on every single command for the rest
-  of the session. Caught while reviewing the command layer against the store,
-  and reworked into a consume-once notice. The build that risks that kind of
-  bug never reached a commit, which is exactly what the review step is for.
+  of the session. Caught while reviewing the command layer against the
+  store, and reworked so the warning shows exactly once. The build that
+  risks that kind of bug never reached a commit, which is exactly what the
+  review step is for.
 - The riskiest mechanism (the camera-entity rig) was spiked and verified
   in-game first, before any feature code, precisely because AI assertions
   about engine APIs are the least trustworthy part of AI-assisted modding;
