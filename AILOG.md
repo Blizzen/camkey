@@ -58,3 +58,12 @@ README. Newest entries at the bottom.
   found by the AI auditing its own earlier output at a different
   altitude (adversarial review vs. construction), which is the working
   pattern this project used throughout: build, then attack the build.
+- Verification pass, all in-game: pause-freeze confirmed (with the vanilla
+  caveat that a LAN-opened world no longer pauses at all, documented in the
+  README); mid-flight dimension change ends playback cleanly with a chat
+  message; the spec's exact "10 seconds" syntax parses; middle-index
+  remove, config screen, and dimension refusals all behave; a violent
+  client kill mid-playback lost zero data; a hand-corrupted save file was
+  kept as .bak with a one-time notice; and a deliberately locked save file
+  produced the in-chat disk warning, with the next capture flushing the
+  stranded data to disk.

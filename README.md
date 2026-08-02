@@ -129,6 +129,10 @@ integrated server is local, which is how the store reaches the world folder.
 - Multiplayer: works when connected to a server (sequences save under
   `config/camkey/by-server/`), but playback near other players is untested
   and out of scope per the spec.
+- Pausing freezes a running playback, with one caveat: once a world is
+  opened to LAN, Minecraft itself no longer pauses on ESC (watch the world
+  keep moving behind the menu), so the take keeps rolling too. The rule is
+  consistent: paused world, paused take; running world, running take.
 - The path math is kept separate from Minecraft on purpose so it could get
   automated tests; setting up the test harness did not fit the time box, so
   it is verified by hand for now.
