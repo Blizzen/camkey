@@ -6,7 +6,10 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.gui.ConfigurationScreen;
+import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import online.blizzen.camkey.CamKey;
 
 /**
@@ -16,6 +19,8 @@ import online.blizzen.camkey.CamKey;
 @EventBusSubscriber(modid = CamKey.MODID, value = Dist.CLIENT)
 public class CamKeyClient {
     public CamKeyClient(ModContainer container) {
+        container.registerConfig(ModConfig.Type.CLIENT, CamKeyConfig.SPEC);
+        container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
     }
 
     @SubscribeEvent

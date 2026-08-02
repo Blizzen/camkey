@@ -1,2 +1,5 @@
 {
+  "camkey.configuration.defaultPlaybackSeconds": "Default playback seconds",
+  "camkey.configuration.easing": "Ease camera in and out",
+  "camkey.configuration.title": "CamKey Settings"
 }
