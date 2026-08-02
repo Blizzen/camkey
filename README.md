@@ -157,25 +157,38 @@ integrated server is local, which is how the store reaches the world folder.
 
 ## AI usage notes
 
-Built with Claude (Claude Code) as the pair; a running log kept during
-development is in [AILOG.md](AILOG.md).
+Built with Claude (Claude Code) as the pair, run along the skill flows from
+[mattpocock/skills](https://github.com/mattpocock/skills): sharpen by
+interview, settle the risky unknown with throwaway code, implement, then
+attack the result. The running log kept live during development is in
+[AILOG.md](AILOG.md).
 
-- **AI-assisted**: the design interview before any code (every major decision
-  above was chosen from explicit trade-offs in that session), scaffolding
-  from the official NeoForge MDK template, and first drafts of each layer
-  against the locked architecture.
-- **By hand / human judgment**: the decisions themselves, in-game
-  verification of every phase (smoothness, camera handback, interrupt
-  behavior, persistence across reload), and review of each draft before it
-  was committed.
+- **Grilling** (`/grill-me`): before any code, the AI interviewed me down
+  every branch of the design decision tree, one question at a time with a
+  recommended answer per question: camera mechanism, command side, data
+  model, persistence, motion shape, failure policy, scope line. Nothing was
+  built until we reached shared understanding; the decisions were mine, and
+  every architectural decision above traces back to that interview.
+- **Prototype** (`/prototype`): the riskiest unknown (does an invisible
+  camera-rig entity give frame-smooth motion and a clean camera handback?)
+  was answered with throwaway code, a hardcoded orbit flight, verified
+  in-game before any feature depended on it. The answer was kept and the
+  spike deleted; it survives only in git history.
+- **Implement**: the AI drafted each layer against the locked decisions; I
+  reviewed every draft and verified every phase in-game before it was
+  committed. Grilling, prototype, and implementation ran in one unbroken
+  context window so the build worked from the same thinking as the
+  interview.
+- **Adversarial review, findings as tickets**: with the build "done", the
+  repo was reviewed against the assessment document as its spec: cold-cloned
+  and built the way a reviewer would, then attacked rubric row by row. The
+  findings became issues #1 to #4 (symptom, cause, proposed change, test)
+  plus a verification ticket (#5) blocked by the fixes; all five were closed
+  with dated in-game verification comments, shipped as v0.1.1.
 - **A catch**: the first draft of the persistence layer's corrupt-file
   recovery marked its "recovered" flag as write-once, which would have
   repeated the "started fresh" warning on every single command for the rest
-  of the session. Caught while reviewing the command layer against the
-  store, and reworked so the warning shows exactly once. The build that
-  risks that kind of bug never reached a commit, which is exactly what the
-  review step is for.
-- The riskiest mechanism (the camera-entity rig) was spiked and verified
-  in-game first, before any feature code, precisely because AI assertions
-  about engine APIs are the least trustworthy part of AI-assisted modding;
-  this one held up.
+  of the session. Caught at the seam, reviewing the command layer against
+  the store's interface, and reworked so the warning shows exactly once.
+  The build that risks that kind of bug never reached a commit, which is
+  exactly what the review step is for.

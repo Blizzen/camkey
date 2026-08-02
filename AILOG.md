@@ -1,69 +1,84 @@
 # AI usage log
 
 Running notes on how AI (Claude, via Claude Code) was used while building
-CamKey, kept live during development. Feeds the AI-usage section of the
-README. Newest entries at the bottom.
+CamKey, kept live during development. The collaboration followed the skill
+flows from [mattpocock/skills](https://github.com/mattpocock/skills):
+sharpen by interview (`/grill-me`), settle the risky unknown with throwaway
+code (`/prototype`), implement, then attack the result and turn the
+findings into tickets. Newest entries at the bottom of each section.
 
-## Session 1: plan + spike
+## Grilling: the decision-tree interview
 
-- Used AI as a design interlocutor before writing any code: walked the whole
-  decision tree (camera mechanism, client vs server commands, data model,
-  persistence format and location, interpolation timing, failure policy,
-  scope cuts) as a structured Q&A, choosing between explicit trade-offs.
-- Key decisions made in that session: invisible client-side dolly entity as
-  the camera rig (instead of teleporting the player or mixin-ing the camera),
-  client-side Brigadier commands, Mojang Codecs to JSON persisted in the world
-  folder, distance-weighted segment timing with a single global ease.
-- AI scaffolded the repo from the official NeoForge MDK template and wrote a
-  throwaway spike (orbit-the-player camera flight) to prove the riskiest
-  mechanism first, before any of the real feature was built.
-- Spike verdict: compiled first try, verified in-game (smooth orbit, clean
-  camera handback, interrupt-and-restart worked).
+- Before any code, the AI walked the whole design decision tree one
+  question at a time, each with a recommended answer: camera mechanism,
+  command side, the spec's add/play naming ambiguity, keyframe data,
+  serialization, file location, motion shape, retake rule, scope line,
+  repo home. Facts were looked up; decisions were put to the human. No
+  code until shared understanding.
+- Decisions locked there: invisible client-side dolly entity as the camera
+  rig (instead of teleporting the player or overriding the camera
+  transform), client-side Brigadier commands, Codecs to JSON persisted in
+  the world folder, distance-weighted constant speed with one global ease,
+  interrupt-and-restart playback.
 
-## Session 1 continued: full system
+## Prototype: the camera-rig spike
 
-- AI wrote the phase-2 system (Keyframe/Sequence codecs, SequenceStore,
-  CameraPath, PlaybackController, command tree, client config) against the
-  architecture locked in the planning Q&A. Compiled first try.
-- Corrections/mistakes recorded:
-  - The first draft of SequenceStore made the corrupt-file recovery flag
-    write-once (final field with a plain getter). Every command fetches the
-    store, so the "could not read your file, started fresh" warning would
-    have printed on every command for the rest of the session. Caught while
-    writing the command layer against the store's API, before the phase was
-    ever built or committed; reworked into a consume-once notice
-    (consumeRecoveryNotice()).
-  - Notably, zero NeoForge/Minecraft API hallucinations across the whole
-    project: both phases compiled on the first attempt. The insurance
-    against that class of error (spike the camera rig first, verify
-    in-game before building on it) turned out not to be needed, but it was
-    the right insurance to buy.
-- Full-system verdict: verified in-game (capture, eased playback, stop,
-  interrupt-and-restart, remove/undo, tab completion, error paths,
-  persistence across world reload).
+- The one mechanism neither of us had personally shipped (point the game
+  camera at a client-spawned entity and fly it along a path) was a genuine
+  design question, so it got throwaway code first: a hardcoded orbit
+  flight around the player, built before any feature work.
+- Verdict, verified in-game: frame-smooth motion from tick-rate updates,
+  clean camera handback, interruption works. The answer was kept, the
+  spike deleted; it survives only in git history.
 
-## Session 2: adversarial pass and fix batch
+## Implement: build phases
 
-- Ran an adversarial review of the finished repo against the assessment
-  document: cold-cloned it from GitHub and built it like a reviewer would,
-  swept the committed file list, and attacked the code rubric row by row.
-- The pass found two behavioral bugs the happy-path testing missed (the
-  playback clock keeps running while the game is paused; playback goes
-  zombie if the dimension changes mid-flight), one reviewer-facing trap
-  (the brief's own example "/camkey play intro 10 seconds" was a parse
-  error because of the trailing word), and one silent-failure gap (a
-  failed disk write only logged). All four filed as issues with symptom,
-  cause, proposed change, and a test, then fixed in one batch.
+- The AI drafted each layer against the locked decisions (data model,
+  store, path math, controller, commands, config). Every phase compiled
+  first try and was verified in-game before the next phase began.
+- Grilling, prototype, and implementation ran in one unbroken context
+  window, so the build worked from the same thinking as the interview.
+
+## Catches
+
+- The first draft of SequenceStore made the corrupt-file recovery flag
+  write-once (final field with a plain getter). Every command fetches the
+  store, so the "could not read your file, started fresh" warning would
+  have printed on every command for the rest of the session. Caught at the
+  seam, while writing the command layer against the store's interface and
+  before the phase was ever committed; reworked so the warning shows
+  exactly once.
+- Notably, zero NeoForge/Minecraft API hallucinations across the whole
+  project: every phase compiled on the first attempt. The insurance
+  against that class of error (prototype the camera rig first, verify
+  in-game before building on it) turned out not to be needed, but it was
+  the right insurance to buy.
+
+## Adversarial review: findings as tickets
+
+- With the build "done", the repo was reviewed against the assessment
+  document as its spec: cold-cloned from GitHub and built the way a
+  reviewer would, committed file list swept, code attacked rubric row by
+  row.
+- Findings: the playback clock kept running while the game was paused;
+  playback went zombie if the dimension changed mid-flight; the brief's
+  own example "/camkey play intro 10 seconds" was a parse error; a failed
+  disk write only logged. Each became an issue (#1 to #4) with symptom,
+  cause, proposed change, and a test, plus a verification ticket (#5)
+  blocked by the fixes.
 - Worth noting for the AI-fluency question: both behavioral bugs were
-  found by the AI auditing its own earlier output at a different
-  altitude (adversarial review vs. construction), which is the working
-  pattern this project used throughout: build, then attack the build.
-- Verification pass, all in-game: pause-freeze confirmed (with the vanilla
-  caveat that a LAN-opened world no longer pauses at all, documented in the
-  README); mid-flight dimension change ends playback cleanly with a chat
-  message; the spec's exact "10 seconds" syntax parses; middle-index
-  remove, config screen, and dimension refusals all behave; a violent
-  client kill mid-playback lost zero data; a hand-corrupted save file was
-  kept as .bak with a one-time notice; and a deliberately locked save file
+  found by the AI auditing its own earlier output at a different altitude
+  (review vs. construction). Build, then attack the build.
+
+## Verification pass (closing #5)
+
+- All in-game: pause-freeze confirmed (with the vanilla caveat that a
+  LAN-opened world no longer pauses at all, documented in the README);
+  mid-flight dimension change ends playback cleanly with a chat message;
+  the spec's exact "10 seconds" syntax parses; middle-index remove, config
+  screen, and dimension refusals all behave; a violent client kill
+  mid-playback lost zero data; a hand-corrupted save file was kept as
+  .bak with a one-time notice; and a deliberately locked save file
   produced the in-chat disk warning, with the next capture flushing the
-  stranded data to disk.
+  stranded data to disk. Fixes shipped as v0.1.1; issues closed with
+  dated comments.
