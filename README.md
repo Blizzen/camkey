@@ -7,6 +7,10 @@ save again, and then play the whole thing back as one smooth camera move. It
 is the kind of tool a Production Associate would use to set up a cinematic
 shot for a recording session, without touching the actor or the set.
 
+**Demo video (90 seconds): https://youtu.be/qiICgLYY4uk** - keyframe
+capture, eased playback, a mid-flight retake, graceful errors, undo, and
+persistence across a world reload.
+
 ## For producers: what it does
 
 - Your view flies the path; your character stays exactly where they were and
